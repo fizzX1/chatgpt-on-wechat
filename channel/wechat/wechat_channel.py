@@ -5,6 +5,7 @@ wechat channel
 """
 
 import os
+import threading
 import requests
 import io
 import time
@@ -17,18 +18,10 @@ from lib import itchat
 from lib.itchat.content import *
 from bridge.reply import *
 from bridge.context import *
-from concurrent.futures import ThreadPoolExecutor
 from config import conf
 from common.time_check import time_checker
 from common.expired_dict import ExpiredDict
 from plugins import *
-thread_pool = ThreadPoolExecutor(max_workers=8)
-
-def thread_pool_callback(worker):
-    worker_exception = worker.exception()
-    if worker_exception:
-        logger.exception("Worker return exception: {}".format(worker_exception))
-
 
 @itchat.msg_register(TEXT)
 def handler_single_msg(msg):
@@ -64,6 +57,39 @@ def _check(func):
         return func(self, cmsg)
     return wrapper
 
+#可用的二维码生成接口
+#https://api.qrserver.com/v1/create-qr-code/?size=400×400&data=https://www.abc.com
+#https://api.isoyu.com/qr/?m=1&e=L&p=20&url=https://www.abc.com
+def qrCallback(uuid,status,qrcode):
+    # logger.debug("qrCallback: {} {}".format(uuid,status))
+    if status == '0':
+        try:
+            from PIL import Image
+            img = Image.open(io.BytesIO(qrcode))
+            _thread = threading.Thread(target=img.show, args=("QRCode",))
+            _thread.setDaemon(True)
+            _thread.start()
+        except Exception as e:
+            pass
+
+        import qrcode
+        url = f"https://login.weixin.qq.com/l/{uuid}"
+        
+        qr_api1="https://api.isoyu.com/qr/?m=1&e=L&p=20&url={}".format(url)
+        qr_api2="https://api.qrserver.com/v1/create-qr-code/?size=400×400&data={}".format(url)
+        qr_api3="https://api.pwmqr.com/qrcode/create/?url={}".format(url)
+        qr_api4="https://my.tv.sohu.com/user/a/wvideo/getQRCode.do?text={}".format(url)
+        print("You can also scan QRCode in any website below:")
+        print(qr_api3)
+        print(qr_api4)
+        print(qr_api2)
+        print(qr_api1)
+        
+        qr = qrcode.QRCode(border=1)
+        qr.add_data(url)
+        qr.make(fit=True)
+        qr.print_ascii(invert=True)
+
 @singleton
 class WechatChannel(ChatChannel):
     def __init__(self):
@@ -76,13 +102,13 @@ class WechatChannel(ChatChannel):
         # login by scan QRCode
         hotReload = conf().get('hot_reload', False)
         try:
-            itchat.auto_login(enableCmdQR=2, hotReload=hotReload)
+            itchat.auto_login(enableCmdQR=2, hotReload=hotReload, qrCallback=qrCallback)
         except Exception as e:
             if hotReload:
                 logger.error("Hot reload failed, try to login without hot reload")
                 itchat.logout()
                 os.remove("itchat.pkl")
-                itchat.auto_login(enableCmdQR=2, hotReload=hotReload)
+                itchat.auto_login(enableCmdQR=2, hotReload=hotReload, qrCallback=qrCallback)
             else:
                 raise e
         self.user_id = itchat.instance.storageClass.userName
@@ -111,7 +137,7 @@ class WechatChannel(ChatChannel):
         logger.debug("[WX]receive voice msg: {}".format(cmsg.content))
         context = self._compose_context(ContextType.VOICE, cmsg.content, isgroup=False, msg=cmsg)
         if context:
-            thread_pool.submit(self._handle, context).add_done_callback(thread_pool_callback)
+            self.produce(context)
 
     @time_checker
     @_check
@@ -119,7 +145,7 @@ class WechatChannel(ChatChannel):
         logger.debug("[WX]receive text msg: {}, cmsg={}".format(json.dumps(cmsg._rawmsg, ensure_ascii=False), cmsg))
         context = self._compose_context(ContextType.TEXT, cmsg.content, isgroup=False, msg=cmsg)
         if context:
-            thread_pool.submit(self._handle, context).add_done_callback(thread_pool_callback)
+            self.produce(context)
 
     @time_checker
     @_check
@@ -127,7 +153,7 @@ class WechatChannel(ChatChannel):
         logger.debug("[WX]receive group msg: {}, cmsg={}".format(json.dumps(cmsg._rawmsg, ensure_ascii=False), cmsg))
         context = self._compose_context(ContextType.TEXT, cmsg.content, isgroup=True, msg=cmsg)
         if context:
-            thread_pool.submit(self._handle, context).add_done_callback(thread_pool_callback)
+            self.produce(context)
     
     @time_checker
     @_check
@@ -137,7 +163,7 @@ class WechatChannel(ChatChannel):
         logger.debug("[WX]receive voice for group msg: {}".format(cmsg.content))
         context = self._compose_context(ContextType.VOICE, cmsg.content, isgroup=True, msg=cmsg)
         if context:
-            thread_pool.submit(self._handle, context).add_done_callback(thread_pool_callback)
+            self.produce(context)
     
     # 统一的发送函数，每个Channel自行实现，根据reply的type字段发送不同类型的消息
     def send(self, reply: Reply, context: Context):
