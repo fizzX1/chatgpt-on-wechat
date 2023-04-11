@@ -1,5 +1,6 @@
 .DS_Store
 .idea
+.vscode
 .wechaty/
 __pycache__/
 venv*
@@ -10,3 +11,14 @@ nohup.out
 tmp
 plugins.json
 itchat.pkl
+*.log
+user_datas.pkl
+plugins/**/
+!plugins/bdunit
+!plugins/dungeon
+!plugins/finish
+!plugins/godcmd
+!plugins/tool
+!plugins/banwords
+!plugins/hello
+!plugins/role

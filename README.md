@@ -7,21 +7,28 @@
 
 - [x] **文本对话：** 接收私聊及群组中的微信消息，使用ChatGPT生成回复内容，完成自动回复
 - [x] **规则定制化：** 支持私聊中按指定规则触发自动回复，支持对群组设置自动回复白名单
-- [x] **多账号：** 支持多微信账号同时运行
-- [x] **图片生成：** 支持根据描述生成图片，并自动发送至个人聊天或群聊
+- [x] **图片生成：** 支持根据描述生成图片，支持图片修复
 - [x] **上下文记忆**：支持多轮对话记忆，且为每个好友维护独立的上下会话
 - [x] **语音识别：** 支持接收和处理语音消息，通过文字或语音回复
-- [x] **插件化：** 支持个性化功能插件，提供角色扮演、文字冒险游戏等预设插件
+- [x] **插件化：** 支持个性化插件，提供角色扮演、文字冒险、与操作系统交互、访问网络数据等能力
 
-> 快速部署:
->
->[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/qApznZ?referralCode=RC3znh)
+> 目前支持微信和微信公众号部署，欢迎接入更多应用，参考 [Terminal代码](https://github.com/zhayujie/chatgpt-on-wechat/blob/master/channel/terminal/terminal_channel.py)实现接收和发送消息逻辑即可接入。 同时欢迎增加新的插件，参考 [插件说明文档](https://github.com/zhayujie/chatgpt-on-wechat/tree/master/plugins)。
+
+
+**一键部署:**
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/qApznZ?referralCode=RC3znh)
+
 
 # 更新日志
 
+>**2023.04.05：** 支持微信个人号部署，兼容角色扮演等预设插件，[使用文档](https://github.com/zhayujie/chatgpt-on-wechat/blob/master/channel/wechatmp/README.md)。(contributed by [@JS00000](https://github.com/JS00000) in [#686](https://github.com/zhayujie/chatgpt-on-wechat/pull/686))
+
+>**2023.04.05：** 增加能让ChatGPT使用工具的`tool`插件，[使用文档](https://github.com/goldfishh/chatgpt-on-wechat/blob/master/plugins/tool/README.md)。工具相关issue可反馈至[chatgpt-tool-hub](https://github.com/goldfishh/chatgpt-tool-hub)。(contributed by [@goldfishh](https://github.com/goldfishh) in [#663](https://github.com/zhayujie/chatgpt-on-wechat/pull/663))
+
 >**2023.03.25：** 支持插件化开发，目前已实现 多角色切换、文字冒险游戏、管理员指令、Stable Diffusion等插件，使用参考 [#578](https://github.com/zhayujie/chatgpt-on-wechat/issues/578)。(contributed by [@lanvent](https://github.com/lanvent) in [#565](https://github.com/zhayujie/chatgpt-on-wechat/pull/565))
 
->**2023.03.09：** 基于 `whisper API` 实现对微信语音消息的解析和回复，添加配置项 `"speech_recognition":true` 即可启用，使用参考 [#415](https://github.com/zhayujie/chatgpt-on-wechat/issues/415)。(contributed by [wanggang1987](https://github.com/wanggang1987) in [#385](https://github.com/zhayujie/chatgpt-on-wechat/pull/385))
+>**2023.03.09：** 基于 `whisper API`(后续已接入更多的语音`API`服务) 实现对微信语音消息的解析和回复，添加配置项 `"speech_recognition":true` 即可启用，使用参考 [#415](https://github.com/zhayujie/chatgpt-on-wechat/issues/415)。(contributed by [wanggang1987](https://github.com/wanggang1987) in [#385](https://github.com/zhayujie/chatgpt-on-wechat/pull/385))
 
 >**2023.03.02：** 接入[ChatGPT API](https://platform.openai.com/docs/guides/chat) (gpt-3.5-turbo)，默认使用该模型进行对话，需升级openai依赖 (`pip3 install --upgrade openai`)。网络问题参考 [#351](https://github.com/zhayujie/chatgpt-on-wechat/issues/351)
 
@@ -58,14 +65,10 @@
 
 > 项目中使用的对话模型是 davinci，计费方式是约每 750 字 (包含请求和回复) 消耗 $0.02，图片生成是每张消耗 $0.016，账号创建有免费的 $18 额度 (更新3.25: 最新注册的已经无免费额度了)，使用完可以更换邮箱重新注册。
 
-#### 1.1 ChapGPT service On Azure
-一种替换以上的方法是使用Azure推出的[ChatGPT service](https://azure.microsoft.com/en-in/products/cognitive-services/openai-service/)。它host在公有云Azure上，因此不需要VPN就可以直接访问。不过目前仍然处于preview阶段。新用户可以通过Try Azure for free来薅一段时间的羊毛
-
-
 ### 2.运行环境
 
 支持 Linux、MacOS、Windows 系统（可在Linux服务器上长期运行)，同时需安装 `Python`。
-> 建议Python版本在 3.7.1~3.9.X 之间，3.10及以上版本在 MacOS 可用，其他系统上不确定能否正常运行。
+> 建议Python版本在 3.7.1~3.9.X 之间，推荐3.8版本，3.10及以上版本在 MacOS 可用，其他系统上不确定能否正常运行。
 
 **(1) 克隆项目代码：**
 
@@ -75,20 +78,35 @@ cd chatgpt-on-wechat/
 ```
 
 **(2) 安装核心依赖 (必选)：**
-
+> 能够使用`itchat`创建机器人，并具有文字交流功能所需的最小依赖集合。
 ```bash
 pip3 install -r requirements.txt
 ```
 
-其中`tiktoken`要求`python`版本在3.8以上，它用于精确计算会话使用的tokens数量，可以不装但建议安装。
+**(3) 拓展依赖 (可选，建议安装)：**
 
-**(3) 拓展依赖 (可选)：**
+```bash
+pip3 install -r requirements-optional.txt
+```
+> 如果某项依赖安装失败请注释掉对应的行再继续。
+
+其中`tiktoken`要求`python`版本在3.8以上，它用于精确计算会话使用的tokens数量，强烈建议安装。
+
 
 使用`google`或`baidu`语音识别需安装`ffmpeg`，
 
 默认的`openai`语音识别不需要安装`ffmpeg`。
 
 参考[#415](https://github.com/zhayujie/chatgpt-on-wechat/issues/415)
+
+使用`azure`语音功能需安装依赖（列在`requirements-optional.txt`内，但为便于`railway`部署已注释）:
+
+```bash
+pip3 install azure-cognitiveservices-speech
+```
+
+> 目前默认发布的镜像和`railway`部署，都基于`apline`，无法安装`azure`的依赖。若有需求请自行基于[`debian`](https://github.com/zhayujie/chatgpt-on-wechat/blob/master/docker/Dockerfile.debian.latest)打包。
+参考[文档](https://learn.microsoft.com/en-us/azure/cognitive-services/speech-service/quickstarts/setup-platform?pivots=programming-language-python&tabs=linux%2Cubuntu%2Cdotnet%2Cjre%2Cmaven%2Cnodejs%2Cmac%2Cpypi)
 
 ## 配置
 
@@ -176,11 +194,9 @@ nohup python3 app.py & tail -f nohup.out          # 在后台运行程序并通�
 ```
 扫码登录后程序即可运行于服务器后台，此时可通过 `ctrl+c` 关闭日志，不会影响后台程序的运行。使用 `ps -ef | grep app.py | grep -v grep` 命令可查看运行于后台的进程，如果想要重新启动程序可以先 `kill` 掉对应的进程。日志关闭后如果想要再次打开只需输入 `tail -f nohup.out`。此外，`scripts` 目录下有一键运行、关闭程序的脚本供使用。
 
-> **注意：** 如果 扫码后手机提示登录验证需要等待5s，而终端的二维码再次刷新并提示 `Log in time out, reloading QR code`，此时需参考此 [issue](https://github.com/zhayujie/chatgpt-on-wechat/issues/8) 修改一行代码即可解决。
+> **多账号支持：** 将项目复制多份，分别启动程序，用不同账号扫码登录即可实现同时运行。
 
-> **多账号支持：** 将 项目复制多份，分别启动程序，用不同账号扫码登录即可实现同时运行。
-
-> **特殊指令：** 用户向机器人发送 **#清除记忆** 即可清空该用户的上下文记忆。
+> **特殊指令：** 用户向机器人发送 **#reset** 即可清空该用户的上下文记忆。
 
 
 ### 3.Docker部署
@@ -200,6 +216,6 @@ FAQs： <https://github.com/zhayujie/chatgpt-on-wechat/wiki/FAQs>
 
 ## 联系
 
-欢迎提交PR、Issues，以及Star支持一下。程序运行遇到问题优先查看 [常见问题列表](https://github.com/zhayujie/chatgpt-on-wechat/wiki/FAQs) ，其次前往 [Issues](https://github.com/zhayujie/chatgpt-on-wechat/issues) 中搜索，若无相似问题可创建Issue，或加微信 eijuyahz 交流。
+欢迎提交PR、Issues，以及Star支持一下。程序运行遇到问题优先查看 [常见问题列表](https://github.com/zhayujie/chatgpt-on-wechat/wiki/FAQs) ，其次前往 [Issues](https://github.com/zhayujie/chatgpt-on-wechat/issues) 中搜索。如果你想了解更多项目细节，并与开发者们交流更多关于AI技术的实践，欢迎加入星球:
 
- 
+<a href="https://public.zsxq.com/groups/88885848842852.html"><img width="360" src="./docs/images/planet.jpg"></a>
