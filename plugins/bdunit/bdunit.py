@@ -16,7 +16,7 @@ from uuid import getnode as get_mac
 """
 
 
-@plugins.register(name="BDunit", desc="Baidu unit bot system", version="0.1", author="jackson", desire_priority=0)
+@plugins.register(name="BDunit", desire_priority=0, hidden=True, desc="Baidu unit bot system", version="0.1", author="jackson")
 class BDunit(Plugin):
     def __init__(self):
         super().__init__()
@@ -36,8 +36,8 @@ class BDunit(Plugin):
             self.handlers[Event.ON_HANDLE_CONTEXT] = self.on_handle_context
             logger.info("[BDunit] inited")
         except Exception as e:
-            logger.warn(
-                "BDunit init failed: %s, ignore " % e)
+            logger.warn("[BDunit] init failed, ignore ")
+            raise e
 
     def on_handle_context(self, e_context: EventContext):
 

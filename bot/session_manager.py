@@ -31,6 +31,8 @@ class Session(object):
     def discard_exceeding(self, max_tokens=None, cur_tokens=None):
         raise NotImplementedError
 
+    def calc_tokens(self):
+        raise NotImplementedError
 
 
 class SessionManager(object):
@@ -50,7 +52,7 @@ class SessionManager(object):
         '''
         if session_id not in self.sessions:
             self.sessions[session_id] = self.sessioncls(session_id, system_prompt, **self.session_args)
-        elif system_prompt is not None: # 如果有新的system_prompt，更新并重置session
+        elif system_prompt is not None:  # 如果有新的system_prompt，更新并重置session
             self.sessions[session_id].set_system_prompt(system_prompt)
         session = self.sessions[session_id]
         return session
